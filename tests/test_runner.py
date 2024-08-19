@@ -21,7 +21,7 @@ from pydantic import ValidationError
 import tests.helper as test_module
 from hera.shared._pydantic import _PYDANTIC_VERSION
 from hera.shared.serialization import serialize
-from hera.workflows._runner.util import _run, _runner
+from hera.workflows._runner.entrypoint import _runner, run
 from hera.workflows.io.v1 import Output
 
 
@@ -596,8 +596,8 @@ def test_script_annotations_unknown_type(
         [{"name": "a_number", "value": "123"}],
     ],
 )
-@patch("hera.workflows._runner.util._runner")
-@patch("hera.workflows._runner.util._parse_args")
+@patch("hera.workflows._runner.entrypoint._runner")
+@patch("hera.workflows._runner.entrypoint._parse_args")
 def test_run(mock_parse_args, mock_runner, kwargs_list: List[Dict[str, str]], tmp_path: Path):
     # GIVEN
     file_path = Path(tmp_path / "test_params")
@@ -608,15 +608,15 @@ def test_run(mock_parse_args, mock_runner, kwargs_list: List[Dict[str, str]], tm
     mock_runner.return_value = kwargs_list
 
     # WHEN
-    _run()
+    run()
 
     # THEN
     mock_parse_args.assert_called_once()
     mock_runner.assert_called_once_with("my_entrypoint", kwargs_list)
 
 
-@patch("hera.workflows._runner.util._runner")
-@patch("hera.workflows._runner.util._parse_args")
+@patch("hera.workflows._runner.entrypoint._runner")
+@patch("hera.workflows._runner.entrypoint._parse_args")
 def test_run_empty_file(mock_parse_args, mock_runner, tmp_path: Path):
     # GIVEN
     file_path = Path(tmp_path / "test_params")
@@ -627,15 +627,15 @@ def test_run_empty_file(mock_parse_args, mock_runner, tmp_path: Path):
     mock_runner.return_value = None
 
     # WHEN
-    _run()
+    run()
 
     # THEN
     mock_parse_args.assert_called_once()
     mock_runner.assert_called_once_with("my_entrypoint", [])
 
 
-@patch("hera.workflows._runner.util._runner")
-@patch("hera.workflows._runner.util._parse_args")
+@patch("hera.workflows._runner.entrypoint._runner")
+@patch("hera.workflows._runner.entrypoint._parse_args")
 def test_run_null_string(mock_parse_args, mock_runner, tmp_path: Path):
     # GIVEN
     file_path = Path(tmp_path / "test_params")
@@ -646,7 +646,7 @@ def test_run_null_string(mock_parse_args, mock_runner, tmp_path: Path):
     mock_runner.return_value = None
 
     # WHEN
-    _run()
+    run()
 
     # THEN
     mock_parse_args.assert_called_once()
@@ -897,11 +897,11 @@ def test_runner_pydantic_output_with_exit_code(
                 {"subpath": "tmp/hera-outputs/parameters/second-output", "value": "my-val"},
             ],
             1,
-            id="use _run to check actual system exit",
+            id="use run to check actual system exit",
         ),
     ],
 )
-@patch("hera.workflows._runner.util._parse_args")
+@patch("hera.workflows._runner.entrypoint._parse_args")
 def test_run_pydantic_output_with_exit_code(
     mock_parse_args,
     entrypoint,
@@ -929,7 +929,7 @@ def test_run_pydantic_output_with_exit_code(
 
     # WHEN / THEN
     with pytest.raises(SystemExit) as e:
-        _run()
+        run()
 
     assert e.value.code == 42
     mock_parse_args.assert_called_once()

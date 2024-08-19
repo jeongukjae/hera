@@ -9,6 +9,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar, Un
 from hera.shared._pydantic import BaseModel, get_field_annotations, get_fields
 from hera.shared.serialization import serialize
 from hera.workflows import Artifact, Parameter
+from hera.workflows._runner.util import _get_type
 from hera.workflows.artifact import ArtifactLoader
 from hera.workflows.io.v1 import (
     Input as InputV1,
@@ -132,8 +133,6 @@ def map_runner_input(
     If the field is annotated, we look for the kwarg with the name from the annotation (Parameter or Artifact).
     Otherwise, we look for the kwarg with the name of the field.
     """
-    from hera.workflows._runner.util import _get_type
-
     input_model_obj = {}
 
     def load_parameter_value(value: str, value_type: type) -> Any:
@@ -179,7 +178,7 @@ def map_runner_input(
     return cast(T, runner_input_class.parse_raw(json.dumps(input_model_obj)))
 
 
-def _map_argo_inputs_to_function(function: Callable, kwargs: Dict[str, str]) -> Dict:
+def map_argo_inputs_to_function(function: Callable, kwargs: Dict[str, str]) -> Dict:
     """Map kwargs from Argo to the function parameters using the function's parameter annotations.
 
     For Parameter inputs:
@@ -214,7 +213,7 @@ def _map_argo_inputs_to_function(function: Callable, kwargs: Dict[str, str]) -> 
     return mapped_kwargs
 
 
-def _save_annotated_return_outputs(
+def save_annotated_return_outputs(
     function_outputs: Union[Tuple[Any], Any],
     output_annotations: List[Union[Tuple[type, Union[Parameter, Artifact]], Union[Type[OutputV1], Type[OutputV2]]]],
 ) -> Optional[Union[OutputV1, OutputV2]]:
@@ -276,7 +275,7 @@ def _save_annotated_return_outputs(
     return None
 
 
-def _save_dummy_outputs(
+def save_dummy_outputs(
     output_annotations: List[
         Union[
             Tuple[type, Union[Parameter, Artifact]],
