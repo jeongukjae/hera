@@ -4,16 +4,12 @@ import functools
 import inspect
 import json
 import os
-from typing import Any, Callable, Optional, cast
+from typing import Any, Callable, Optional
 
+from hera._utils import inspect_util, type_util
 from hera.shared._pydantic import _PYDANTIC_VERSION
 from hera.workflows import Artifact, Parameter
 from hera.workflows.artifact import ArtifactLoader
-
-try:
-    from typing import Annotated, get_args, get_origin  # type: ignore
-except ImportError:
-    from typing_extensions import Annotated, get_args, get_origin  # type: ignore
 
 if _PYDANTIC_VERSION == 2:
     from pydantic.type_adapter import TypeAdapter  # type: ignore
@@ -86,56 +82,35 @@ def _parse(value: str, key: str, f: Callable) -> Any:
         return value
 
 
-def _get_type(type_: type) -> type:
-    if get_origin(type_) is None:
-        return type_
-    origin_type = cast(type, get_origin(type_))
-    if origin_type is Annotated:
-        return get_args(type_)[0]
-    return origin_type
-
-
 def _get_unannotated_type(key: str, f: Callable) -> Optional[type]:
     """Get the type of function param without the 'Annotated' outer type."""
-    type_ = inspect.signature(f).parameters[key].annotation
-    if type_ is inspect.Parameter.empty:
+    type_ = inspect_util.inspect_callable_param_annotation(f, key)
+    if type_ is None:
         return None
-    if get_origin(type_) is None:
-        return type_
-
-    origin_type = cast(type, get_origin(type_))
-    if origin_type is Annotated:
-        return get_args(type_)[0]
-
-    # Type could be a dict/list with subscript type
-    return type_
+    return type_util.consume_annotated_type(type_)
 
 
 def _is_str_kwarg_of(key: str, f: Callable) -> bool:
     """Check if param `key` of function `f` has a type annotation of a subclass of str."""
-    func_param_annotation = inspect.signature(f).parameters[key].annotation
-    if func_param_annotation is inspect.Parameter.empty:
-        return False
-
-    type_ = _get_type(func_param_annotation)
-    return issubclass(type_, str)
+    if func_param_annotation := inspect_util.inspect_callable_param_annotation(f, key):
+        type_ = type_util.consume_annotated_type(func_param_annotation)
+        return type_util.can_consume_primitive(type_, str)
+    return False
 
 
 def _is_artifact_loaded(key: str, f: Callable) -> bool:
     """Check if param `key` of function `f` is actually an Artifact that has already been loaded."""
-    param = inspect.signature(f).parameters[key]
-    return (
-        get_origin(param.annotation) is Annotated
-        and isinstance(get_args(param.annotation)[1], Artifact)
-        and get_args(param.annotation)[1].loader == ArtifactLoader.json.value
-    )
+    param_annotation = inspect_util.inspect_callable_param_annotation(f, key)
+    if type_util.is_annotated(param_annotation):
+        if artifact := type_util.consume_annotated_metadata(param_annotation, Artifact):
+            return artifact.loader == ArtifactLoader.json.value
+    return False
 
 
 def _is_output_kwarg(key: str, f: Callable) -> bool:
     """Check if param `key` of function `f` is an output Artifact/Parameter."""
-    param = inspect.signature(f).parameters[key]
-    return (
-        get_origin(param.annotation) is Annotated
-        and isinstance(get_args(param.annotation)[1], (Artifact, Parameter))
-        and get_args(param.annotation)[1].output
-    )
+    param_annotation = inspect_util.inspect_callable_param_annotation(f, key)
+    if type_util.is_annotated(param_annotation):
+        if param_or_artifact := type_util.consume_annotated_metadata(param_annotation, (Artifact, Parameter)):
+            return bool(param_or_artifact.output)
+    return False
