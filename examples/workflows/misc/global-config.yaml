@@ -12,12 +12,14 @@ spec:
       command:
       - cowsay
       image: docker/whalesay:latest
+      imagePullPolicy: Always
     name: whalesay
   - name: say
     script:
       command:
       - python3
       image: image-say
+      imagePullPolicy: Always
       source: |-
         import os
         import sys

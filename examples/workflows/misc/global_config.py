@@ -5,6 +5,7 @@ global_config.api_version = "argoproj.io/v0beta9000"
 global_config.namespace = "argo-namespace"
 global_config.service_account_name = "argo-account"
 global_config.image = "image-say"
+global_config.image_pull_policy = "always"
 global_config.script_command = ["python3"]
 global_config.set_class_defaults(Container, active_deadline_seconds=100, command=["cowsay"])
 

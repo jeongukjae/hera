@@ -15,9 +15,9 @@ TBase = TypeVar("TBase", bound="BaseMixin")
 TypeTBase = Type[TBase]
 
 Hook = Callable[[TBase], TBase]
-"""`Hook` is a callable that takes a Hera objects and returns the same, optionally mutated, object. 
+"""`Hook` is a callable that takes a Hera objects and returns the same, optionally mutated, object.
 
-This can be a Workflow, a Script, a Container, etc - any Hera object. 
+This can be a Workflow, a Script, a Container, etc - any Hera object.
 """
 
 _HookMap = Dict[TypeTBase, List[Hook]]
@@ -49,6 +49,9 @@ class _GlobalConfig:
 
     _image: Union[str, Callable[[], str]] = "python:3.9"
     """an optional Docker image specification"""
+
+    _image_pull_policy: Optional[str] = None
+    """an optional imagePullPolicy value"""
 
     _pre_build_hooks: Optional[_HookMap] = None
     """any pre build hooks to invoke before Hera builds the objects necessary for communicating with Argo"""
@@ -92,6 +95,16 @@ class _GlobalConfig:
     def image(self, image: Union[str, Callable[[], str]]) -> None:
         """Set the default image to use for Tasks."""
         self._image = image
+
+    @property
+    def image_pull_policy(self) -> Optional[str]:
+        """Return the default imagePullPolicy for image."""
+        return self._image_pull_policy
+
+    @image_pull_policy.setter
+    def image_pull_policy(self, image_pull_policy: Optional[str]) -> None:
+        """Set the default imagePullPolicy for image."""
+        self._image_pull_policy = image_pull_policy
 
     @property
     def token(self) -> Optional[str]:
